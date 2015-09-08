@@ -1,0 +1,3 @@
+[submodule "DerelictGLFW3"]
+	path = DerelictGLFW3
+	url = https://github.com/Extrawurst/DerelictGLFW3.git
