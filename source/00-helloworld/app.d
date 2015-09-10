@@ -34,8 +34,21 @@ void main()
     glfwMakeContextCurrent(window);
 
     bgfx_platform_data_t pd;
-    pd.nwh          = glfwGetCocoaWindow(window);
-    pd.context      = glfwGetNSGLContext(window);
+	version(darwin)
+	{
+		pd.nwh          = glfwGetCocoaWindow(window);
+		pd.context      = glfwGetNSGLContext(window);
+	}
+	else version(Windows)
+	{
+		pd.nwh          = glfwGetWin32Window(window);
+		pd.context      = null;
+	}
+	else
+	{
+		static assert(false, "platform not yet supported");
+	}
+	
     bgfx_set_platform_data(&pd);
 
     auto resInit = bgfx_init();
