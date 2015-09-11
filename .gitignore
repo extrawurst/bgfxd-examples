@@ -1,2 +1,5 @@
 source/00-helloworld/.dub/
 source/01-cubes/.dub
+source/01-cubes/dub.selections.json
+source/01-cubes/dub.userprefs
+dub.selections.json

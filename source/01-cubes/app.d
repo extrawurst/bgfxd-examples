@@ -216,26 +216,9 @@ void main()
 
         vec3 at = vec3(0,0,0);
         vec3 eye = vec3(0,0,-35);
-        
-        bgfx_hmd_t* hmd = bgfx_get_hmd();
-        //if (null != hmd && 0 != (hmd.flags & BGFX_HMD_RENDERING) )
-        {/*
-            float view[16];
-            bx::mtxQuatTranslationHMD(view, hmd->eye[0].rotation, eye);
-            
-            float proj[16];
-            bx::mtxProj(proj, hmd->eye[0].fov, 0.1f, 100.0f);
-            
-            bgfx_set_view_transform(0, view, proj);
-            
-            // Set view 0 default viewport.
-            //
-            // Use HMD's width/height since HMD's internal frame buffer size
-            // might be much larger than window size.
-            bgfx_set_view_rect(0, 0, 0, hmd.width, hmd.height);
-            */
-        }
-        //else
+
+        assert(bgfx_get_hmd() == null, "hmd not supported right now");
+
         {
             mat4 view = mat4.look_at(eye,at,vec3(0,1,0)).transposed();
 
@@ -252,9 +235,9 @@ void main()
         bgfx_touch(0);
         
         // Submit 11x11 cubes.
-        for (uint32_t yy = 0; yy < 11; ++yy)
+        foreach (yy; 0..11)
         {
-            for (uint32_t xx = 0; xx < 11; ++xx)
+            foreach (xx; 0..11)
             {
                 mat4 mtx = mat4.translation(-15.0f + xx*3.0f,-15.0f + yy*3.0f, 0);
 
