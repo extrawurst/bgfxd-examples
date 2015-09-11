@@ -3,10 +3,12 @@ import std.stdio;
 import std.stdio;
 import std.algorithm:max;
 
+import gl3n.linalg;
+
 import derelict.bgfx.bgfx;
 import derelict.glfw3.glfw3;
 
-struct PosColorVertex
+align(1) struct PosColorVertex
 {
     float m_x;
     float m_y;
@@ -19,12 +21,12 @@ struct PosColorVertex
     {
         bgfx_vertex_decl_begin(&ms_decl);
         bgfx_vertex_decl_add(&ms_decl, BGFX_ATTRIB_POSITION, 3, BGFX_ATTRIB_TYPE_FLOAT);
-        bgfx_vertex_decl_add(&ms_decl, BGFX_ATTRIB_COLOR0, 4, BGFX_ATTRIB_TYPE_UINT8);
+        bgfx_vertex_decl_add(&ms_decl, BGFX_ATTRIB_COLOR0, 4, BGFX_ATTRIB_TYPE_UINT8, true);
         bgfx_vertex_decl_end(&ms_decl);
     }
 }
 
-static PosColorVertex[8] s_cubeVertices =
+align(1) static PosColorVertex[8] s_cubeVertices =
 [
     PosColorVertex(-1.0f,  1.0f,  1.0f, 0xff000000 ),
     PosColorVertex( 1.0f,  1.0f,  1.0f, 0xff0000ff ),
@@ -39,45 +41,56 @@ static PosColorVertex[8] s_cubeVertices =
 static uint16_t[36] s_cubeIndices =
 [
     0, 1, 2, // 0
-        1, 3, 2,
-        4, 6, 5, // 2
-        5, 6, 7,
-        0, 2, 4, // 4
-        4, 2, 6,
-        1, 5, 3, // 6
-        5, 7, 3,
-        0, 4, 1, // 8
-        4, 5, 1,
-        2, 3, 6, // 10
-        6, 3, 7,
+    1, 3, 2,
+    4, 6, 5, // 2
+    5, 6, 7,
+    0, 2, 4, // 4
+    4, 2, 6,
+    1, 5, 3, // 6
+    5, 7, 3,
+    0, 4, 1, // 8
+    4, 5, 1,
+    2, 3, 6, // 10
+    6, 3, 7,
 ];
 
 uint16_t width = 1024;
 uint16_t height = 768;
 uint32_t dbg = BGFX_DEBUG_TEXT;
 uint32_t reset = BGFX_RESET_VSYNC;
+float time=0;
 
-bgfx_memory_t loadMem(string _filePath)
+bgfx_memory_t* loadMem(string _filePath)
 {
     bgfx_memory_t res;
 
     import std.file;
-    writefln("loadmem: %s",_filePath);
+    import core.stdc.stdio;
+    import std.string;
 
-    auto filecontent = cast(ubyte[])read(_filePath) ~ '\0';
+    assert(exists(_filePath));
 
-    assert(filecontent.length > 1);
+    auto file = fopen(toStringz(_filePath), "rb");
+    scope(exit) fclose(file);
+    fseek(file, 0, SEEK_END);
+    auto size = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    res.data = filecontent.ptr;
-    res.size = cast(uint)filecontent.length;
+    assert(size > 1);
 
-    return res;
+    auto data = bgfx_alloc(cast(uint32_t)size+1);
+
+    fread(data.data, size, 1, file);
+
+    data.data[size]=0;
+
+    return data;
 }
 
 bgfx_shader_handle_t loadShader(string _name)
 {
     string shaderPath = "shaders/dx9/";
-    
+
     switch (bgfx_get_renderer_type())
     {
         case BGFX_RENDERER_TYPE_DIRECT3D11:
@@ -103,10 +116,7 @@ bgfx_shader_handle_t loadShader(string _name)
 
     string filePath = shaderPath ~ _name ~ ".bin";
 
-    auto mem = loadMem(filePath);
-    writefln("bgfx_create_shader: %s",filePath);
-    writefln("%s",mem);
-    return bgfx_create_shader(&mem);
+    return bgfx_create_shader(loadMem(filePath));
 }
 
 bgfx_program_handle_t loadProgram(string _vsName, string _fsName)
@@ -121,7 +131,6 @@ bgfx_program_handle_t loadProgram(string _vsName, string _fsName)
 
     assert(vsh.idx);
    
-    writefln("bgfx_create_program"); 
     return bgfx_create_program(vsh, fsh, true /* destroy shaders when program is destroyed */);
 }
 
@@ -197,19 +206,78 @@ void main()
 
     while (!glfwWindowShouldClose(window))
     {
-        // Set view 0 default viewport.
-        bgfx_set_view_rect(0, 0, 0, width, height);
-            
-        // This dummy draw call is here to make sure that view 0 is cleared
-        // if no other draw calls are submitted to view 0.
-        bgfx_touch(0);
+        time += 0.01f;
 
         // Use debug font to print information about this example.
         bgfx_dbg_text_clear();
         bgfx_dbg_text_printf(0, 1, 0x4f, "bgfx/examples/01-cube");
         bgfx_dbg_text_printf(0, 2, 0x6f, "Description: Rendering simple static mesh.");
         //bgfx_dbg_text_printf(0, 3, 0x0f, "Frame: % 7.3f[ms]", cast(double)(frameTime)*toMs);
+
+        vec3 at = vec3(0,0,0);
+        vec3 eye = vec3(0,0,-35);
+        
+        bgfx_hmd_t* hmd = bgfx_get_hmd();
+        //if (null != hmd && 0 != (hmd.flags & BGFX_HMD_RENDERING) )
+        {/*
+            float view[16];
+            bx::mtxQuatTranslationHMD(view, hmd->eye[0].rotation, eye);
             
+            float proj[16];
+            bx::mtxProj(proj, hmd->eye[0].fov, 0.1f, 100.0f);
+            
+            bgfx_set_view_transform(0, view, proj);
+            
+            // Set view 0 default viewport.
+            //
+            // Use HMD's width/height since HMD's internal frame buffer size
+            // might be much larger than window size.
+            bgfx_set_view_rect(0, 0, 0, hmd.width, hmd.height);
+            */
+        }
+        //else
+        {
+            mat4 view = mat4.look_at(eye,at,vec3(0,1,0)).transposed();
+
+            mat4 proj = mat4.perspective(width,height,60,0.1f,100.0f).transposed();
+
+            bgfx_set_view_transform(0, view.value_ptr, proj.value_ptr);
+            
+            // Set view 0 default viewport.
+            bgfx_set_view_rect(0, 0, 0, width, height);
+        }
+
+        // This dummy draw call is here to make sure that view 0 is cleared
+        // if no other draw calls are submitted to view 0.
+        bgfx_touch(0);
+        
+        // Submit 11x11 cubes.
+        for (uint32_t yy = 0; yy < 11; ++yy)
+        {
+            for (uint32_t xx = 0; xx < 11; ++xx)
+            {
+                mat4 mtx = mat4.translation(-15.0f + xx*3.0f,-15.0f + yy*3.0f, 0);
+
+                mtx *= mat4.xrotation(time + xx*0.21f);
+                mtx *= mat4.yrotation(time + yy*0.37f);
+
+                mtx = mtx.transposed();
+
+                // Set model matrix for rendering.
+                bgfx_set_transform(mtx.value_ptr);
+                
+                // Set vertex and index buffer.
+                bgfx_set_vertex_buffer(m_vbh);
+                bgfx_set_index_buffer(m_ibh);
+                
+                // Set render states.
+                bgfx_set_state(BGFX_STATE_DEFAULT);
+                
+                // Submit primitive for rendering to view 0.
+                bgfx_submit(0, m_program);
+            }
+        }
+
         // Advance to next frame. Rendering thread will be kicked to
         // process submitted rendering primitives.
         bgfx_frame();
@@ -217,6 +285,10 @@ void main()
         /* Poll for and process events */
         glfwPollEvents();
     }
+
+    bgfx_destroy_index_buffer(m_ibh);
+    bgfx_destroy_vertex_buffer(m_vbh);
+    bgfx_destroy_program(m_program);
 
     // Shutdown bgfx.
     bgfx_shutdown();

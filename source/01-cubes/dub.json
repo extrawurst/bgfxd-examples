@@ -8,6 +8,7 @@
 	"workingDirectory": "../../bin/",
 	"dependencies": {
 		"derelict-bgfx": "~>5.0.0",
+        "gl3n": "~>1.2.0",
         "derelict-glfw3": {"version": "~master", "path": "../../DerelictGLFW3/"}
 	}
 }
