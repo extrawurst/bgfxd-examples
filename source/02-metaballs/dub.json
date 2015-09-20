@@ -1,0 +1,14 @@
+{
+	"name": "02-metaballs",
+	"description": "",
+	"copyright": "Copyright © 2015, Stephan Dilly",
+	"authors": ["Stephan Dilly"],
+	"sourcePaths": ["."],
+	"targetPath": "../../bin/",
+	"workingDirectory": "../../bin/",
+	"dependencies": {
+		"derelict-bgfx": "~>5.0.0",
+        "gl3n": "~>1.2.0",
+        "derelict-glfw3": {"version": "~master", "path": "../../DerelictGLFW3/"}
+	}
+}
