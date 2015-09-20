@@ -11,7 +11,7 @@ import derelict.glfw3.glfw3;
 import vs_metaballs;
 import fs_metaballs;
 
-align(1) struct PosNormalColorVertex
+struct PosNormalColorVertex
 {
     float[3] m_pos;
     float[3] m_normal;
@@ -29,7 +29,7 @@ align(1) struct PosNormalColorVertex
     }
 }
 
-align(1) struct Grid
+struct Grid
 {
     float m_val = 0;
     float[3] m_normal = 0;
@@ -577,19 +577,19 @@ void main()
         int64_t profTriangulate = 0;
         
         // Allocate 32K vertices in transient vertex buffer.
-        uint32_t maxVertices = (32<<10);
+        static immutable uint32_t maxVertices = (32<<10);
         bgfx_transient_vertex_buffer_t tvb;
         bgfx_alloc_transient_vertex_buffer(&tvb, maxVertices, &PosNormalColorVertex.ms_decl);
 
-        const uint32_t numSpheres = 16;
-        float[4][numSpheres] sphere;
+        static immutable uint32_t numSpheres = 16;
+        vec4[numSpheres] sphere;
         for (uint32_t ii = 0; ii < numSpheres; ++ii)
         {
             import core.stdc.math:sinf,cosf;
-            sphere[ii][0] = sinf(time*(ii*0.21f)+ii*0.37f) * (DIMS * 0.5f - 8.0f);
-            sphere[ii][1] = sinf(time*(ii*0.37f)+ii*0.67f) * (DIMS * 0.5f - 8.0f);
-            sphere[ii][2] = cosf(time*(ii*0.11f)+ii*0.13f) * (DIMS * 0.5f - 8.0f);
-            sphere[ii][3] = 1.0f/(2.0f + (sinf(time*(ii*0.13f) )*0.5f+0.5f)*2.0f);
+            sphere[ii].x = sinf(time*(ii*0.21f)+ii*0.37f) * (DIMS * 0.5f - 8.0f);
+            sphere[ii].y = sinf(time*(ii*0.37f)+ii*0.67f) * (DIMS * 0.5f - 8.0f);
+            sphere[ii].z = cosf(time*(ii*0.11f)+ii*0.13f) * (DIMS * 0.5f - 8.0f);
+            sphere[ii].w = 1.0f/(2.0f + (sinf(time*(ii*0.13f) )*0.5f+0.5f)*2.0f);
         }
 
         for (uint32_t zz = 0; zz < DIMS; ++zz)
@@ -606,12 +606,12 @@ void main()
                     float prod = 1.0f;
                     for (uint32_t ii = 0; ii < numSpheres; ++ii)
                     {
-                        const float* pos = sphere[ii].ptr;
-                        float dx = pos[0] - (-DIMS*0.5f + cast(float)(xx) );
-                        float dy = pos[1] - (-DIMS*0.5f + cast(float)(yy) );
-                        float dz = pos[2] - (-DIMS*0.5f + cast(float)(zz) );
+                        const float* pos = sphere[ii].vector.ptr;
+                        vec3 delta = vec3(pos[0] - (-DIMS*0.5f + cast(float)(xx) ),
+                            pos[1] - (-DIMS*0.5f + cast(float)(yy) ),
+                            pos[2] - (-DIMS*0.5f + cast(float)(zz) ));
                         float invr = pos[3];
-                        float dot = dx*dx + dy*dy + dz*dz;
+                        float dot = delta * delta;
                         dot *= invr*invr;
                         
                         dist *= dot;
@@ -633,16 +633,14 @@ void main()
                 for (uint32_t xx = 1; xx < DIMS-1; ++xx)
                 {
                     uint32_t xoffset = offset + xx;
-                    
-                    Grid* grid = m_grid.ptr;
-                    float[3] normal =
-                    [
-                        grid[xoffset-1     ].m_val - grid[xoffset+1     ].m_val,
-                            grid[xoffset-ypitch].m_val - grid[xoffset+ypitch].m_val,
-                            grid[xoffset-zpitch].m_val - grid[xoffset+zpitch].m_val,
-                    ];
 
-                    vec3 norm = vec3(normal).normalized() * -1;
+                    Grid* grid = m_grid.ptr;
+                    auto normal = vec3(
+                        grid[xoffset-1     ].m_val - grid[xoffset+1     ].m_val,
+                        grid[xoffset-ypitch].m_val - grid[xoffset+ypitch].m_val,
+                        grid[xoffset-zpitch].m_val - grid[xoffset+zpitch].m_val);
+
+                    auto norm = normal.normalized() * -1;
                     grid[xoffset].m_normal = norm.vector;
                 }
             }
@@ -670,26 +668,23 @@ void main()
                     rgb[0] = xx*invdim;
                     rgb[3] = (xx+1)*invdim;
                     
-                    float[3] pos =
-                    [
-                        -DIMS*0.5f + float(xx),
-                            -DIMS*0.5f + float(yy),
-                            -DIMS*0.5f + float(zz)
-                    ];
+                    auto pos = vec3(-DIMS*0.5f + float(xx),
+                        -DIMS*0.5f + float(yy),
+                        -DIMS*0.5f + float(zz));
                     
                     const Grid* grid = m_grid.ptr;
                     const Grid*[8] val = [
                         &grid[xoffset+zpitch+ypitch  ],
-                            &grid[xoffset+zpitch+ypitch+1],
-                            &grid[xoffset+ypitch+1       ],
-                            &grid[xoffset+ypitch         ],
-                            &grid[xoffset+zpitch         ],
-                            &grid[xoffset+zpitch+1       ],
-                            &grid[xoffset+1              ],
-                            &grid[xoffset                ],
+                        &grid[xoffset+zpitch+ypitch+1],
+                        &grid[xoffset+ypitch+1       ],
+                        &grid[xoffset+ypitch         ],
+                        &grid[xoffset+zpitch         ],
+                        &grid[xoffset+zpitch+1       ],
+                        &grid[xoffset+1              ],
+                        &grid[xoffset                ],
                     ];
 
-                    uint32_t num = triangulate( cast(uint8_t*)vertex, PosNormalColorVertex.ms_decl.stride, rgb.ptr, pos.ptr, val, 0.5f);
+                    uint32_t num = triangulate( cast(uint8_t*)vertex, PosNormalColorVertex.ms_decl.stride, rgb.ptr, pos.value_ptr, val, 0.5f);
                     vertex += num;
                     numVertices += num;
                 }
