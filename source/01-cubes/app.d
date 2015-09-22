@@ -1,5 +1,7 @@
 import std.stdio;
 
+import common;
+
 import std.stdio;
 import std.algorithm:max;
 
@@ -8,7 +10,7 @@ import gl3n.linalg;
 import derelict.bgfx.bgfx;
 import derelict.glfw3.glfw3;
 
-align(1) struct PosColorVertex
+struct PosColorVertex
 {
     float m_x;
     float m_y;
@@ -26,7 +28,7 @@ align(1) struct PosColorVertex
     }
 }
 
-align(1) static PosColorVertex[8] s_cubeVertices =
+static PosColorVertex[8] s_cubeVertices =
 [
     PosColorVertex(-1.0f,  1.0f,  1.0f, 0xff000000 ),
     PosColorVertex( 1.0f,  1.0f,  1.0f, 0xff0000ff ),
@@ -59,80 +61,6 @@ uint16_t height = 768;
 uint32_t dbg = BGFX_DEBUG_TEXT;
 uint32_t reset = BGFX_RESET_VSYNC;
 float time=0;
-
-bgfx_memory_t* loadMem(string _filePath)
-{
-    bgfx_memory_t res;
-
-    import std.file;
-    import core.stdc.stdio;
-    import std.string;
-
-    assert(exists(_filePath));
-
-    auto file = fopen(toStringz(_filePath), "rb");
-    scope(exit) fclose(file);
-    fseek(file, 0, SEEK_END);
-    auto size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    assert(size > 1);
-
-    auto data = bgfx_alloc(cast(uint32_t)size+1);
-
-    fread(data.data, size, 1, file);
-
-    data.data[size]=0;
-
-    return data;
-}
-
-bgfx_shader_handle_t loadShader(string _name)
-{
-    string shaderPath = "shaders/dx9/";
-
-    switch (bgfx_get_renderer_type())
-    {
-        case BGFX_RENDERER_TYPE_DIRECT3D11:
-        case BGFX_RENDERER_TYPE_DIRECT3D12:
-            shaderPath = "shaders/dx11/";
-            break;
-            
-        case BGFX_RENDERER_TYPE_OPENGL:
-            shaderPath = "shaders/glsl/";
-            break;
-            
-        case BGFX_RENDERER_TYPE_METAL:
-            shaderPath = "shaders/metal/";
-            break;
-            
-        case BGFX_RENDERER_TYPE_OPENGLES:
-            shaderPath = "shaders/gles/";
-            break;
-            
-        default:
-            break;
-    }
-
-    string filePath = shaderPath ~ _name ~ ".bin";
-
-    return bgfx_create_shader(loadMem(filePath));
-}
-
-bgfx_program_handle_t loadProgram(string _vsName, string _fsName)
-{
-    bgfx_shader_handle_t vsh = loadShader(_vsName);
-    bgfx_shader_handle_t fsh = bgfx_shader_handle_t(BGFX_INVALID_HANDLE);
-    if (_fsName.length>0)
-    {
-        fsh = loadShader(_fsName);
-        assert(fsh.idx);
-    }
-
-    assert(vsh.idx);
-   
-    return bgfx_create_program(vsh, fsh, true /* destroy shaders when program is destroyed */);
-}
 
 void main()
 {

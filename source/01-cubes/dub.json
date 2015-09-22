@@ -3,7 +3,7 @@
 	"description": "",
 	"copyright": "Copyright © 2015, Stephan Dilly",
 	"authors": ["Stephan Dilly"],
-	"sourcePaths": ["."],
+	"sourcePaths": [".","../shared"],
 	"targetPath": "../../bin/",
 	"workingDirectory": "../../bin/",
 	"dependencies": {
