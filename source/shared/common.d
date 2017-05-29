@@ -2,6 +2,10 @@
 
 import derelict.bgfx.bgfx;
 
+static const uint16_t invalidHandle = uint16_t.max;
+
+alias BGFX_INVALID_HANDLE = invalidHandle;
+
 bgfx_memory_t* loadMem(string _filePath)
 {
     bgfx_memory_t res;

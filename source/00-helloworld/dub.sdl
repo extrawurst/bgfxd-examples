@@ -1,0 +1,8 @@
+name "00-helloworld"
+authors "Stephan Dilly"
+copyright "Copyright © 2017, Stephan Dilly"
+dependency "derelict-bgfx" version="~>5.0.0"
+dependency "derelict-glfw3" path="../../DerelictGLFW3/"
+targetPath "../../bin/"
+workingDirectory "../../bin/"
+sourcePaths "."
